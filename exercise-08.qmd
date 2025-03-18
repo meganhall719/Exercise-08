@@ -330,26 +330,26 @@ What is the p value associated with your original slope coefficient?
 #Theory-Based Method for Permutation Test
 set.seed(123)
 
-# Step 1: Fit the original model and extract the slope coefficient
+#  Fit the original model and extract the slope coefficient
 original_model <- lm(ECV ~ Group_size, data = d)
 original_slope <- coef(original_model)[2]
 cat("Original slope coefficient:", original_slope, "\n\n")
 
-# Step 2: Perform permutations
+# Perform permutations
 n_permutations <- 1000
 permuted_slopes <- numeric(n_permutations)
 
 for (i in 1:n_permutations) {
-  # Create permuted dataset - shuffle ECV while keeping Group_size fixed
+  
   d_permuted <- d
   d_permuted$ECV <- sample(d$ECV, replace = FALSE)
   
-  # Fit model and store the slope
+
   perm_model <- lm(ECV ~ Group_size, data = d_permuted)
   permuted_slopes[i] <- coef(perm_model)[2]
 }
 
-# Step 3: Calculate basic statistics of the null distribution
+# Calculate basic statistics of the null distribution
 mean_null <- mean(permuted_slopes)
 sd_null <- sd(permuted_slopes)
 
@@ -367,7 +367,7 @@ cat("t-statistic:", t_stat, "\n")
 cat("Degrees of freedom:", df, "\n")
 cat("P-value (theory-based method):", p_value, "\n\n")
 
-# Step 5: Visual representation
+# Step 5: Visual 
 hist(permuted_slopes, 
      main = "Null Distribution of Slope Coefficients",
      xlab = "Permuted Slope Coefficient", 
