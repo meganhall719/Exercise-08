@@ -1,0 +1,503 @@
+---
+title: "exercise-08"
+format: html
+editor: visual
+---
+
+## Exercise 08
+
+## Step 1
+
+```{r}
+#loading data as a tibble
+library(tidyverse)
+library(dplyr)
+
+f <-"https://raw.githubusercontent.com/difiore/ada-datasets/refs/heads/main/Street_et_al_2017.csv"
+d <- read_csv(f, col_names = TRUE)
+head(d)
+
+# using the skim() functin. to do a exploratory analysis 
+library(skimr)
+skim_results <- skim(d)
+skim_results
+```
+
+## Step 2
+
+plot brain size(ECV) as a function of social gorup size (Group_size), longevity (Longevity), juvenile period length(Weaning), and reprodcutive lifespan (Repro_lifespan).
+
+```{r}
+
+#Plot brain size (ECV) as a function of social group size, longevity, juvenile period length, and reproductive lifespan (Repro_lifespan) (separate plots for each) 
+
+library(ggplot2)
+library(gridExtra)
+
+
+par(mfrow = c(2, 2))
+plot(d$Longevity, d$ECV)
+plot(d$Group_size, d$ECV)
+plot(d$Weaning, d$ECV)
+plot(d$Repro_lifespan, d$ECV)
+m1 <-lm(formula = ECV~Longevity, data = d)
+m1
+
+```
+
+```{r}
+par(mfrow = c(2, 2))
+plot(d$Longevity, d$ECV)
+plot(d$Group_size, d$ECV)
+plot(d$Weaning, d$ECV)
+plot(d$Repro_lifespan, d$ECV)
+m1 <-lm(formula = ECV~Longevity, data = d)
+m1
+
+broom::tidy(m1)
+confint(m1)
+
+c <- d|>
+  filter(Taxonomic_group == "Catarrhini")
+c
+m1 <-lm(formula = ECV~Longevity, data = c)
+```
+
+```{r}
+par(mfrow = c(2, 2))
+plot(d$Group_size, d$ECV, main="Brain Size vs Group Size", xlab="Group Size", ylab="ECV")
+plot(d$Longevity, d$ECV, main="Brain Size vs Longevity", xlab="Longevity", ylab="ECV")
+plot(d$Weaning, d$ECV, main="Brain Size vs Weaning", xlab="Weaning", ylab="ECV")
+plot(d$Repro_lifespan, d$ECV, main="Brain Size vs Reproductive Lifespan", xlab="Reproductive Lifespan", ylab="ECV")
+
+```
+
+## Step 3
+
+Derive by hand the ordinary least squares (OLS) regression coefficients and for ECV as a function of social group size.
+
+```{r}
+# Get complete cases only; removing rows from  dataset where variables are missing.
+d_complete <- d[complete.cases(d[, c("ECV", "Group_size")]), ]
+
+# Calculate means
+x_bar <- mean(d_complete$Group_size)
+y_bar <- mean(d_complete$ECV)
+x_bar
+y_bar
+
+# Calculating the sum of products of deviations
+sum_xy_dev <- sum((d_complete$Group_size - x_bar) * (d_complete$ECV - y_bar))
+sum_xy_dev
+
+# Calculate the sum of squared deviations of x
+sum_x_squared_dev <- sum((d_complete$Group_size - x_bar)^2)
+sum_x_squared_dev
+
+#  β₁
+beta1 <- sum_xy_dev / sum_x_squared_dev
+beta1
+
+# β₀
+beta0 <- y_bar - beta1 * x_bar
+beta0
+
+```
+
+##Step 4
+
+Confirming results using lm () function.
+
+```{r}
+
+library(broom)
+library(ggplot2)
+# Fit linear model
+model <- lm(ECV ~ Group_size, data = d)
+summary(model)
+
+# Extract coefficients
+coef(model)
+
+model$coefficients
+
+tidy(model)
+
+
+g <- ggplot(data = d, aes(x = Group_size, y = ECV))
+g <- g + geom_point()
+g <- g + geom_smooth(method = "lm", formula = y ~ x)
+g
+```
+
+## Step 5
+
+Three different major radiations of primates - “catarrhines”, “platyrrhines”, and “strepsirhine
+
+```{r}
+# Spliting the data by taxonomic group and run regressions
+catarrhines <- subset(d, Taxonomic_group == "Catarrhini")
+platyrrhines <- subset(d, Taxonomic_group == "Platyrrhini")
+strepsirhines <- subset(d, Taxonomic_group == "Strepsirhini")
+
+# Run the regressions
+cat_model <- lm(ECV ~ Group_size, data = catarrhines)
+plat_model <- lm(ECV ~ Group_size, data = platyrrhines)
+strep_model <- lm(ECV ~ Group_size, data = strepsirhines)
+
+# results
+summary(cat_model)
+summary(plat_model)
+summary(strep_model)
+
+# Compare coefficients
+cat_coef <- coefficients(cat_model)
+plat_coef <- coefficients(plat_model)
+strep_coef <- coefficients(strep_model)
+
+
+# making a comparison table
+coef_table <- data.frame(
+  Group = c("Catarrhini", "Platyrrhini", "Strepsirhini"),
+  Intercept = c(cat_coef[1], plat_coef[1], strep_coef[1]),
+  Slope = c(cat_coef[2], plat_coef[2], strep_coef[2])
+)
+print(coef_table)
+```
+
+1.  The intercepts do vary; the catarrhines have a higher baseline ECV (83.2) compared to the platyrrhines (16.18) and the strepsirhines (8.18). I interprety this to mean that the catarrhines have larger brain sizes than the other two groups.
+
+2.  The slopes also differ. platyrrhines show the steepest relationship (1.97) between group size and ECV, then strepsirhines (1.84), and catarrhines show the least steep relationship (1.15). this suggests to us that the effect of group size on brain size may be stronger in platyrrhines \> strepsirhines \>catarrhines.
+
+## Step 6
+
+For your first regression of ECV on social group size, calculate the standard error for the slope coefficient, the 95% CI, and the p value associated with this coefficient by hand. Also extract this same information from the results of running the lm() function.
+
+#### A . from hand
+
+```{r}
+
+
+model <- lm(ECV ~ Group_size, data = d)
+summary_model <- summary(model)
+
+
+n <- length(model$residuals)  # Number of observations
+df <- model$df.residual       # Degrees of freedom (n-2)
+beta1 <- coef(model)[2]       # Slope coefficient
+rss <- sum(model$residuals^2) # Residual sum of squares
+residual_se <- summary_model$sigma  # Residual standard error
+
+print(paste("Number of observations:", n))
+print(paste("Degrees of freedom:", df))
+print(paste("Slope coefficient (beta1):", beta1))
+print(paste("Residual sum of squares:", rss))
+print(paste("Residual standard error:", residual_se))
+
+#  MANUAL CALCULATION OF STANDARD ERROR FOR SLOPE
+
+# getting the predictor variable (Group_size) and response variable (ECV)
+x <- model.matrix(model)[,"Group_size"]  # Extract Group_size values
+y <- model$model$ECV                    # Extract ECV values
+
+# Calculate mean of x
+x_mean <- mean(x)
+print(paste("Mean of Group_size:", x_mean))
+
+# Calculate sum of squared deviations of x from its mean
+ssx <- sum((x - x_mean)^2)
+print(paste("Sum of squared deviations of x:", ssx))
+
+# Calculate standard error of the slope manually
+se_beta1_manual <- sqrt(rss/df) / sqrt(ssx)
+print(paste("Manually calculated SE for slope:", se_beta1_manual))
+
+
+# MANUAL CALCULATION OF 95% CONFIDENCE INTERVAL
+
+# Get critical t-value for 95% CI with df degrees of freedom
+t_critical <- qt(0.975, df)
+print(paste("Critical t-value for 95% CI:", t_critical))
+
+# Calculate lower and upper bounds of 95% CI
+ci_lower <- beta1 - t_critical * se_beta1_manual
+ci_upper <- beta1 + t_critical * se_beta1_manual
+print(paste("95% CI for slope: (", round(ci_lower, 4), ",", round(ci_upper, 4), ")"))
+
+
+# MANUAL CALCULATION OF P-VALUE
+
+# Calculate t-statistic 
+t_stat_manual <- beta1 / se_beta1_manual
+print(paste("Manually calculated t-statistic:", t_stat_manual))
+
+
+# Calculate two-tailed p-value 
+p_value_manual <- 2 * pt(-abs(t_stat_manual), df)
+print(paste("Manually calculated p-value:", p_value_manual))
+
+
+# VISUALIZE
+
+# Plot the regression line and its confidence interval
+plot(x, y, main="Regression of ECV on Group Size", 
+     xlab="Group Size", ylab="ECV",
+     pch=19, col="darkgray")
+
+# Add the regression line
+abline(model, col="blue", lwd=2)
+
+# Add the confidence bands (not exact, but illustrative)
+new_x <- seq(min(x), max(x), length.out=100)
+pred <- predict(model, newdata=data.frame(Group_size=new_x), 
+                interval="confidence", level=0.95)
+lines(new_x, pred[,"lwr"], col="red", lty=2)
+lines(new_x, pred[,"upr"], col="red", lty=2)
+
+legend("topleft", 
+       legend=c("Data Points", "Regression Line", "95% CI"),
+       col=c("darkgray", "blue", "red"), 
+       pch=c(19, NA, NA), 
+       lty=c(NA, 1, 2),
+       lwd=c(NA, 2, 1))
+
+
+```
+
+#### B. using lm function
+
+```{r}
+
+#Standard error for the slope coefficient
+# Fit the model
+model <- lm(ECV ~ Group_size, data = d)
+model_summary <- summary(model)
+
+#  standard error for slope
+se_slope <- model_summary$coefficients[2, 2]
+print(se_slope)
+# [1] 0.3508
+
+
+```
+
+```{r}
+
+#  95% confidence interval
+ci_95 <- confint(model, "Group_size", level = 0.95)
+print(ci_95)
+#              2.5 %    97.5 %
+# Group_size  1.7699  3.15624
+```
+
+```{r}
+
+# Extract p-value
+p_value <- model_summary$coefficients[2, 4]
+print(p_value)
+# [1] 7.259e-11
+```
+
+```{r}
+#making it nice and neat
+coefficient_stats <- data.frame(
+  Estimate = coef(model)[2],
+  Std_Error = se_slope,
+  t_value = model_summary$coefficients[2, 3],
+  p_value = p_value,
+  CI_lower = ci_95[1],
+  CI_upper = ci_95[2]
+)
+
+print(coefficient_stats)
+#          Estimate Std_Error  t_value    p_value  CI_lower  CI_upper
+# Group_size  2.463     0.351    7.021  7.259e-11     1.77     3.156
+```
+
+## Step 7
+
+**Use a permutation approach with 1000 permutations to generate a null sampling distribution for the slope coefficient.**
+
+What is it that you need to permute?
+
+-   we need to permute the response variable (ECV) and keep the predictor vairalbe (Group_size) fixed.
+
+What is the p value associated with your original slope coefficient?
+
+-   \- 7.251e-11
+
+```{r}
+#Theory-Based Method for Permutation Test
+set.seed(123)
+
+# Step 1: Fit the original model and extract the slope coefficient
+original_model <- lm(ECV ~ Group_size, data = d)
+original_slope <- coef(original_model)[2]
+cat("Original slope coefficient:", original_slope, "\n\n")
+
+# Step 2: Perform permutations
+n_permutations <- 1000
+permuted_slopes <- numeric(n_permutations)
+
+for (i in 1:n_permutations) {
+  # Create permuted dataset - shuffle ECV while keeping Group_size fixed
+  d_permuted <- d
+  d_permuted$ECV <- sample(d$ECV, replace = FALSE)
+  
+  # Fit model and store the slope
+  perm_model <- lm(ECV ~ Group_size, data = d_permuted)
+  permuted_slopes[i] <- coef(perm_model)[2]
+}
+
+# Step 3: Calculate basic statistics of the null distribution
+mean_null <- mean(permuted_slopes)
+sd_null <- sd(permuted_slopes)
+
+cat("Mean of null distribution:", mean_null, "\n")
+cat("Standard deviation of null distribution:", sd_null, "\n\n")
+
+
+# Calculate t-statistic using the standard deviation from permutations as the standard error
+t_stat <- (original_slope - mean_null) / sd_null
+df <- original_model$df.residual
+
+# Calculate p-value
+p_value <- 2 * pt(-abs(t_stat), df)
+cat("t-statistic:", t_stat, "\n")
+cat("Degrees of freedom:", df, "\n")
+cat("P-value (theory-based method):", p_value, "\n\n")
+
+# Step 5: Visual representation
+hist(permuted_slopes, 
+     main = "Null Distribution of Slope Coefficients",
+     xlab = "Permuted Slope Coefficient", 
+     col = "lightblue",
+     breaks = 30)
+abline(v = original_slope, col = "red", lwd = 2)
+abline(v = mean_null, col = "blue", lwd = 2, lty = 2)
+legend("topright", 
+       c("Original Slope", "Mean of Null Distribution"), 
+       col = c("red", "blue"), 
+       lwd = c(2, 2),
+       lty = c(1, 2))
+
+# i noticed i could not see my original slope line 
+# histogram with wider range
+hist(permuted_slopes, 
+     main = "Null Distribution of Slope Coefficients",
+     xlab = "Permuted Slope Coefficient", 
+     col = "lightblue",
+     breaks = 30,
+     xlim = c(min(permuted_slopes), max(max(permuted_slopes), original_slope + 0.2)))
+abline(v = original_slope, col = "red", lwd = 2)
+abline(v = mean_null, col = "blue", lwd = 2, lty = 2)
+legend("topright", 
+       c("Original Slope", "Mean of Null Distribution"), 
+       col = c("red", "blue"), 
+       lwd = c(2, 2),
+       lty = c(1, 2))
+```
+
+## Step 8
+
+Use bootstrapping to generate a 95% CI for your estimate of the slope coefficient using both the quantile method and the theory-based method (i.e., using the standard deviation of the bootstrapped sampling distribution as an estimate of the standard error).
+
+Do these CIs suggest that your slope coefficient is different from zero?
+
+**yes, these confidence intervals strongly suggest that the slope coefficient is significantly different from zero.** Since zero falls outside the confidence intervals, we can reject the null hypothesis that there is no relationship between Group_size and ECV. The fact that all intervals are positive tells me that there is a significant positive relationship between group size and brain size (ECV) in primates. (WOOOHOOO!!!)
+
+-   Quantile Method
+
+    -   95% CI: (1.455623, 3.305508)
+
+    -   this interval is positive and does NOT include 0
+
+-   Theory-based Method
+
+    -   95% CI: (1.529792, 3.396351)
+
+    -   This interval is also positive and does not include zero
+
+```{r}
+# Bootstrapping to Generate 95% Confidence Intervals for Slope Coefficient
+
+
+
+set.seed(123)
+
+#  original model
+original_model <- lm(ECV ~ Group_size, data = d)
+original_slope <- coef(original_model)[2]
+cat("Original slope coefficient:", original_slope, "\n\n")
+
+
+n_bootstrap <- 1000
+bootstrap_slopes <- numeric(n_bootstrap)
+
+
+for (i in 1:n_bootstrap) {
+  
+  boot_indices <- sample(1:nrow(d), nrow(d), replace = TRUE)
+  boot_data <- d[boot_indices, ]
+  
+  # Fit model on bootstrap sample
+  boot_model <- lm(ECV ~ Group_size, data = boot_data)
+  
+  # Store the slope coefficient
+  bootstrap_slopes[i] <- coef(boot_model)[2]
+}
+
+#  Summary statistics of bootstrap distribution
+mean_boot <- mean(bootstrap_slopes)
+sd_boot <- sd(bootstrap_slopes)
+
+cat("Bootstrap distribution summary:\n")
+cat("Mean:", mean_boot, "\n")
+cat("Standard deviation:", sd_boot, "\n\n")
+
+#   Quantile method (percentile bootstrap)
+ci_quantile <- quantile(bootstrap_slopes, c(0.025, 0.975))
+cat("95% CI using quantile method:\n")
+cat("Lower bound:", ci_quantile[1], "\n")
+cat("Upper bound:", ci_quantile[2], "\n\n")
+
+#   Theory-based method
+
+df <- original_model$df.residual
+t_critical <- qt(0.975, df)
+ci_theory_lower <- original_slope - t_critical * sd_boot
+ci_theory_upper <- original_slope + t_critical * sd_boot
+
+cat("95% CI using theory-based method:\n")
+cat("Lower bound:", ci_theory_lower, "\n")
+cat("Upper bound:", ci_theory_upper, "\n\n")
+
+# Check if CIs include zero
+cat("Does the quantile method CI include zero?", ci_quantile[1] <= 0 && ci_quantile[2] >= 0, "\n")
+cat("Does the theory-based method CI include zero?", ci_theory_lower <= 0 && ci_theory_upper >= 0, "\n\n")
+
+#  Compare with parametric CI from the original model
+parametric_ci <- confint(original_model, "Group_size", level = 0.95)
+cat("95% CI from parametric method:\n")
+cat("Lower bound:", parametric_ci[1], "\n")
+cat("Upper bound:", parametric_ci[2], "\n\n")
+
+#  Visual of the bootstrap distribution
+hist(bootstrap_slopes, 
+     main = "Bootstrap Distribution of Slope Coefficients",
+     xlab = "Bootstrap Slope Coefficient", 
+     col = "lightgreen",
+     breaks = 30)
+abline(v = original_slope, col = "red", lwd = 2)
+abline(v = ci_quantile, col = "blue", lwd = 2, lty = 2)
+abline(v = c(ci_theory_lower, ci_theory_upper), col = "purple", lwd = 2, lty = 3)
+abline(v = 0, col = "black", lwd = 2, lty = 1)  # Reference line at zero
+
+legend("topright", 
+       c("Original Slope", "Quantile CI", "Theory-based CI", "Zero"),
+       col = c("red", "blue", "purple", "black"), 
+       lwd = c(2, 2, 2, 2),
+       lty = c(1, 2, 3, 1))
+
+
+```
